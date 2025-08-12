@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數位黑板 - Digital Blackboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #2c2c2c;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .toolbar {
+            width: 200px;
+            background: #1a1a1a;
+            border-right: 2px solid #444;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .toolbar h2 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .tool-group {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #555;
+        }
+
+        .tool-group h3 {
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .color-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .color-btn {
+            width: 100%;
+            height: 40px;
+            border: 3px solid #666;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(255,255,255,0.2);
+        }
+
+        .color-btn.active {
+            border-color: #fff;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        .white { background-color: #ffffff; color: #000; }
+        .red { background-color: #ff4444; color: #fff; }
+        .yellow { background-color: #ffff44; color: #000; }
+        .eraser { background-color: #666; color: #fff; }
+
+        .size-control {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .size-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #555;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .size-display {
+            color: #fff;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .undo-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .clear-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .export-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #2c2c2c;
+            padding: 20px;
+        }
+
+        #blackboard {
+            background: #0d1117;
+            border: 4px solid #8B4513;
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 
+                inset 0 0 50px rgba(0,0,0,0.8),
+                0 0 30px rgba(0,0,0,0.5);
+        }
+
+        .size-preview {
+            width: 100%;
+            height: 60px;
+            background: #0d1117;
+            border: 2px solid #666;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .preview-dot {
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .instructions {
+            color: #ccc;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 工具列 -->
+        <div class="toolbar">
+            <h2>🖊️ 數位黑板</h2>
+            
+            <!-- 顏色選擇 -->
+            <div class="tool-group">
+                <h3>色筆選擇</h3>
+                <div class="color-buttons">
+                    <button class="color-btn white active" data-color="#ffffff">白色粉筆</button>
+                    <button class="color-btn red" data-color="#ff4444">紅色粉筆</button>
+                    <button class="color-btn yellow" data-color="#ffff44">黃色粉筆</button>
+                    <button class="color-btn eraser" data-tool="eraser">🧽 板擦</button>
+                </div>
+            </div>
+
+            <!-- 粗細控制 -->
+            <div class="tool-group">
+                <h3>粉筆粗細</h3>
+                <div class="size-control">
+                    <input type="range" class="size-slider" id="sizeSlider" min="2" max="30" value="5">
+                    <div class="size-display">粗細: <span id="sizeValue">5</span>px</div>
+                    <div class="size-preview">
+                        <div class="preview-dot" id="previewDot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按鈕 -->
+            <div class="tool-group">
+                <h3>操作功能</h3>
+                <div class="action-buttons">
+                    <button class="action-btn undo-btn" id="undoBtn">↶ 恢復上一動</button>
+                    <button class="action-btn clear-btn" id="clearBtn">🗑️ 清空黑板</button>
+                    <button class="action-btn export-btn" id="exportBtn">💾 匯出PNG</button>
+                </div>
+            </div>
+
+            <div class="instructions">
+                💡 提示：<br>
+                • 選擇顏色後開始繪畫<br>
+                • 調整粗細滑桿改變筆觸<br>
+                • 使用板擦來擦除內容<br>
+                • 可以恢復上一個動作
+            </div>
+        </div>
+
+        <!-- 畫布區域 -->
+        <div class="canvas-container">
+            <canvas id="blackboard" width="1000" height="600"></canvas>
+        </div>
+    </div>
+
+    <script>
+        class DigitalBlackboard {
+            constructor() {
+                this.canvas = document.getElementById('blackboard');
+                this.ctx = this.canvas.getContext('2d');
+                this.isDrawing = false;
+                this.currentColor = '#ffffff';
+                this.currentSize = 5;
+                this.isErasing = false;
+                this.history = [];
+                this.historyStep = -1;
+                
+                this.initializeCanvas();
+                this.bindEvents();
+                this.saveState();
+            }
+
+            initializeCanvas() {
+                // 設置畫布背景為黑板色
+                this.ctx.fillStyle = '#0d1117';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 設置畫筆屬性
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.imageSmoothingEnabled = true;
+            }
+
+            bindEvents() {
+                // 顏色選擇
+                document.querySelectorAll('.color-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.selectTool(e.target);
+                    });
+                });
+
+                // 粗細調整
+                const sizeSlider = document.getElementById('sizeSlider');
+                const sizeValue = document.getElementById('sizeValue');
+                const previewDot = document.getElementById('previewDot');
+
+                sizeSlider.addEventListener('input', (e) => {
+                    this.currentSize = e.target.value;
+                    sizeValue.textContent = this.currentSize;
+                    this.updatePreviewDot();
+                });
+
+                // 繪畫事件
+                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+
+                // 觸控事件 (手機平板支援)
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousedown', {
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                    this.canvas.dispatchEvent(mouseEvent);
+                });
+
+                this.canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousemove', {
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                    this.canvas.dispatchEvent(mouseEvent);
+                });
+
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const mouseEvent = new MouseEvent('mouseup', {});
+                    this.canvas.dispatchEvent(mouseEvent);
+                });
+
+                // 功能按鈕
+                document.getElementById('undoBtn').addEventListener('click', () => this.undo());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearBoard());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportImage());
+
+                // 初始化預覽點
+                this.updatePreviewDot();
+            }
+
+            selectTool(element) {
+                // 移除所有active狀態
+                document.querySelectorAll('.color-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // 添加active狀態到當前選中的按鈕
+                element.classList.add('active');
+
+                // 設置工具
+                if (element.dataset.tool === 'eraser') {
+                    this.isErasing = true;
+                    this.canvas.style.cursor = 'grab';
+                } else {
+                    this.isErasing = false;
+                    this.currentColor = element.dataset.color;
+                    this.canvas.style.cursor = 'crosshair';
+                }
+            }
+
+            updatePreviewDot() {
+                const previewDot = document.getElementById('previewDot');
+                previewDot.style.width = this.currentSize + 'px';
+                previewDot.style.height = this.currentSize + 'px';
+                previewDot.style.backgroundColor = this.isErasing ? '#666' : this.currentColor;
+            }
+
+            getMousePos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            startDrawing(e) {
+                this.isDrawing = true;
+                const pos = this.getMousePos(e);
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(pos.x, pos.y);
+                
+                if (this.isErasing) {
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                } else {
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.strokeStyle = this.currentColor;
+                }
+                
+                this.ctx.lineWidth = this.currentSize;
+            }
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                
+                const pos = this.getMousePos(e);
+                this.ctx.lineTo(pos.x, pos.y);
+                this.ctx.stroke();
+            }
+
+            stopDrawing() {
+                if (this.isDrawing) {
+                    this.isDrawing = false;
+                    this.saveState();
+                }
+            }
+
+            saveState() {
+                this.historyStep++;
+                if (this.historyStep < this.history.length) {
+                    this.history.length = this.historyStep;
+                }
+                this.history.push(this.canvas.toDataURL());
+            }
+
+            undo() {
+                if (this.historyStep > 0) {
+                    this.historyStep--;
+                    const img = new Image();
+                    img.onload = () => {
+                        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        this.ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = this.history[this.historyStep];
+                }
+            }
+
+            clearBoard() {
+                if (confirm('確定要清空整個黑板嗎？')) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.initializeCanvas();
+                    this.saveState();
+                }
+            }
+
+            exportImage() {
+                // 創建一個新的canvas來合成最終圖像
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = this.canvas.width;
+                exportCanvas.height = this.canvas.height;
+                const exportCtx = exportCanvas.getContext('2d');
+                
+                // 設置白色背景 (因為PNG透明背景可能不適合所有用途)
+                exportCtx.fillStyle = '#0d1117';
+                exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+                
+                // 繪製黑板內容
+                exportCtx.drawImage(this.canvas, 0, 0);
+                
+                // 下載圖片
+                const link = document.createElement('a');
+                link.download = `blackboard_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.png`;
+                link.href = exportCanvas.toDataURL('image/png');
+                link.click();
+            }
+        }
+
+        // 初始化黑板
+        document.addEventListener('DOMContentLoaded', () => {
+            new DigitalBlackboard();
+        });
+
+        // 防止頁面滾動 (觸控設備)
+        document.body.addEventListener('touchstart', (e) => {
+            if (e.target === document.querySelector('#blackboard')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.body.addEventListener('touchend', (e) => {
+            if (e.target === document.querySelector('#blackboard')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target === document.querySelector('#blackboard')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
