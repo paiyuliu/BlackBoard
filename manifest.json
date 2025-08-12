@@ -2,7 +2,7 @@
   "name": "數位黑板",
   "short_name": "黑板",
   "description": "數位黑板應用程式",
-  "start_url": "/",
+  "start_url": "/BlackBoard/",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
