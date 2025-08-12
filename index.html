@@ -94,6 +94,7 @@
         .red { background-color: #ff4444; color: #fff; }
         .yellow { background-color: #ffff44; color: #000; }
         .eraser { background-color: #666; color: #fff; }
+        .text { background-color: #4CAF50; color: #fff; }
         .size-control {
             display: flex;
             flex-direction: column;
@@ -106,6 +107,7 @@
             background: #555;
             outline: none;
             -webkit-appearance: none;
+            appearance: none;
         }
         .size-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -192,6 +194,32 @@
             margin-top: 10px;
             line-height: 1.3;
         }
+        
+        /* 文字輸入框樣式 */
+        .text-input-overlay {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            padding: 5px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        .text-input-field {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 24px;
+            outline: none;
+            min-width: 100px;
+            resize: none;
+        }
+        
+        .text-input-field::placeholder {
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -210,6 +238,32 @@
                     <button class="color-btn red" data-color="#ff4444">紅色粉筆</button>
                     <button class="color-btn yellow" data-color="#ffff44">黃色粉筆</button>
                     <button class="color-btn eraser" data-tool="eraser">🧽 板擦</button>
+                    <button class="color-btn text" data-tool="text">📝 文字工具</button>
+                </div>
+            </div>
+
+            <!-- 文字工具設定 -->
+            <div class="tool-group" id="textToolGroup" style="display: none;">
+                <h3>文字設定</h3>
+                <div class="text-controls">
+                    <label for="fontSizeSlider" style="color: #fff; font-size: 12px;">字體大小:</label>
+                    <input type="range" class="size-slider" id="fontSizeSlider" min="12" max="72" value="24">
+                    <div class="size-display">大小: <span id="fontSizeValue">24</span>px</div>
+                    
+                    <label for="fontFamily" style="color: #fff; font-size: 12px; margin-top: 10px; display: block;">字體:</label>
+                    <select id="fontFamily" style="width: 100%; padding: 5px; margin-top: 5px; background: #555; color: #fff; border: 1px solid #777; border-radius: 4px;">
+                        <option value="Arial">Arial</option>
+                        <option value="微軟正黑體">微軟正黑體</option>
+                        <option value="新細明體">新細明體</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                    
+                    <div style="margin-top: 10px;">
+                        <label style="color: #fff; font-size: 12px;">
+                            <input type="checkbox" id="boldText" style="margin-right: 5px;"> 粗體
+                        </label>
+                    </div>
                 </div>
             </div>
     
@@ -240,6 +294,7 @@
                 • 選擇顏色後開始繪畫<br>
                 • 調整粗細滑桿改變筆觸<br>
                 • 使用板擦來擦除內容<br>
+                • 使用文字工具點擊輸入文字<br>
                 • 可以恢復上一個動作
             </div>
         </div>
@@ -247,6 +302,10 @@
         <!-- 畫布區域 -->
         <div class="canvas-container">
             <canvas id="blackboard" width="1000" height="600"></canvas>
+            <!-- 文字輸入框 -->
+            <div class="text-input-overlay" id="textInputOverlay">
+                <textarea class="text-input-field" id="textInputField" placeholder="輸入文字..."></textarea>
+            </div>
         </div>
     </div>
     
@@ -259,8 +318,14 @@
                 this.currentColor = '#ffffff';
                 this.currentSize = 5;
                 this.isErasing = false;
+                this.isTextMode = false;
+                this.fontSize = 24;
+                this.fontFamily = 'Arial';
+                this.isBold = false;
                 this.history = [];
                 this.historyStep = -1;
+                this.textInputOverlay = document.getElementById('textInputOverlay');
+                this.textInputField = document.getElementById('textInputField');
                 
                 this.initializeCanvas();
                 this.bindEvents();
@@ -285,7 +350,7 @@
                         this.selectTool(e.target);
                     });
                 });
-    
+
                 // 粗細調整
                 const sizeSlider = document.getElementById('sizeSlider');
                 const sizeValue = document.getElementById('sizeValue');
@@ -294,14 +359,33 @@
                     sizeValue.textContent = this.currentSize;
                     this.updatePreviewDot();
                 });
-    
+
+                // 文字工具設定
+                const fontSizeSlider = document.getElementById('fontSizeSlider');
+                const fontSizeValue = document.getElementById('fontSizeValue');
+                fontSizeSlider.addEventListener('input', (e) => {
+                    this.fontSize = e.target.value;
+                    fontSizeValue.textContent = this.fontSize;
+                    this.updateTextInputStyle();
+                });
+
+                const fontFamily = document.getElementById('fontFamily');
+                fontFamily.addEventListener('change', (e) => {
+                    this.fontFamily = e.target.value;
+                    this.updateTextInputStyle();
+                });
+
+                const boldText = document.getElementById('boldText');
+                boldText.addEventListener('change', (e) => {
+                    this.isBold = e.target.checked;
+                    this.updateTextInputStyle();
+                });
+
                 // 繪畫事件
-                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('mousedown', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('mousemove', (e) => this.draw(e));
                 this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
-    
-                // 觸控事件 (手機平板支援)
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());                // 觸控事件 (手機平板支援)
                 this.canvas.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     const touch = e.touches[0];
@@ -332,12 +416,28 @@
                 document.getElementById('undoBtn').addEventListener('click', () => this.undo());
                 document.getElementById('clearBtn').addEventListener('click', () => this.clearBoard());
                 document.getElementById('exportBtn').addEventListener('click', () => this.exportImage());
-    
+
+                // 文字輸入框事件
+                this.textInputField.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.commitText();
+                    } else if (e.key === 'Escape') {
+                        this.cancelTextInput();
+                    }
+                });
+
+                // 點擊其他地方時提交文字
+                document.addEventListener('click', (e) => {
+                    if (this.isTextMode && this.textInputOverlay.style.display === 'block' && 
+                        !this.textInputOverlay.contains(e.target) && e.target !== this.canvas) {
+                        this.commitText();
+                    }
+                });
+
                 // 初始化預覽點
                 this.updatePreviewDot();
-            }
-    
-            selectTool(element) {
+            }            selectTool(element) {
                 // 移除所有active狀態
                 document.querySelectorAll('.color-btn').forEach(btn => {
                     btn.classList.remove('active');
@@ -345,15 +445,29 @@
                 
                 // 添加active狀態到當前選中的按鈕
                 element.classList.add('active');
-    
+
+                // 隱藏文字輸入框如果正在顯示
+                if (this.textInputOverlay.style.display === 'block') {
+                    this.commitText();
+                }
+
                 // 設置工具
                 if (element.dataset.tool === 'eraser') {
                     this.isErasing = true;
+                    this.isTextMode = false;
                     this.canvas.style.cursor = 'grab';
+                    this.hideTextToolGroup();
+                } else if (element.dataset.tool === 'text') {
+                    this.isErasing = false;
+                    this.isTextMode = true;
+                    this.canvas.style.cursor = 'text';
+                    this.showTextToolGroup();
                 } else {
                     this.isErasing = false;
+                    this.isTextMode = false;
                     this.currentColor = element.dataset.color;
                     this.canvas.style.cursor = 'crosshair';
+                    this.hideTextToolGroup();
                 }
             }
     
@@ -363,6 +477,21 @@
                 previewDot.style.height = this.currentSize + 'px';
                 previewDot.style.backgroundColor = this.isErasing ? '#666' : this.currentColor;
             }
+
+            showTextToolGroup() {
+                document.getElementById('textToolGroup').style.display = 'block';
+            }
+
+            hideTextToolGroup() {
+                document.getElementById('textToolGroup').style.display = 'none';
+            }
+
+            updateTextInputStyle() {
+                this.textInputField.style.fontSize = this.fontSize + 'px';
+                this.textInputField.style.fontFamily = this.fontFamily;
+                this.textInputField.style.fontWeight = this.isBold ? 'bold' : 'normal';
+                this.textInputField.style.color = this.currentColor;
+            }
     
             getMousePos(e) {
                 const rect = this.canvas.getBoundingClientRect();
@@ -370,6 +499,77 @@
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top
                 };
+            }
+
+            handleCanvasClick(e) {
+                if (this.isTextMode) {
+                    this.startTextInput(e);
+                } else {
+                    this.startDrawing(e);
+                }
+            }
+
+            startTextInput(e) {
+                const pos = this.getMousePos(e);
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                // 如果已經有文字輸入框在顯示，先提交之前的文字
+                if (this.textInputOverlay.style.display === 'block') {
+                    this.commitText();
+                }
+                
+                // 設置輸入框位置
+                this.textInputOverlay.style.left = (canvasRect.left + pos.x) + 'px';
+                this.textInputOverlay.style.top = (canvasRect.top + pos.y) + 'px';
+                this.textInputOverlay.style.display = 'block';
+                
+                // 清空並聚焦輸入框
+                this.textInputField.value = '';
+                this.updateTextInputStyle();
+                this.textInputField.focus();
+            }
+
+            commitText() {
+                const text = this.textInputField.value.trim();
+                if (text) {
+                    const overlayRect = this.textInputOverlay.getBoundingClientRect();
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    
+                    // 計算文字在畫布上的位置
+                    const x = overlayRect.left - canvasRect.left;
+                    const y = overlayRect.top - canvasRect.top;
+                    
+                    this.drawText(text, x, y);
+                    this.saveState();
+                }
+                this.hideTextInput();
+            }
+
+            cancelTextInput() {
+                this.hideTextInput();
+            }
+
+            hideTextInput() {
+                this.textInputOverlay.style.display = 'none';
+                this.textInputField.value = '';
+            }
+
+            drawText(text, x, y) {
+                this.ctx.save();
+                
+                // 設置文字樣式
+                const fontWeight = this.isBold ? 'bold' : 'normal';
+                this.ctx.font = `${fontWeight} ${this.fontSize}px ${this.fontFamily}`;
+                this.ctx.fillStyle = this.currentColor;
+                this.ctx.textBaseline = 'top';
+                
+                // 支援多行文字
+                const lines = text.split('\n');
+                lines.forEach((line, index) => {
+                    this.ctx.fillText(line, x, y + (index * this.fontSize * 1.2));
+                });
+                
+                this.ctx.restore();
             }
     
             startDrawing(e) {
