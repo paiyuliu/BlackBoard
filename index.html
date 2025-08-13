@@ -462,7 +462,8 @@
                 } else if (element.dataset.tool === 'text') {
                     this.isErasing = false;
                     this.isTextMode = true;
-                    this.canvas.style.cursor = 'text';
+                    // this.canvas.style.cursor = 'text';
+                    this.canvas.style.cursor = 'crosshair';
                     this.showTextToolGroup();
                 } else {
                     this.isErasing = false;
@@ -695,3 +696,4 @@
     </script>
 </body>
 </html>
+
