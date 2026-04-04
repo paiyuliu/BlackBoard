@@ -402,7 +402,7 @@
                 const sizeInput = document.getElementById('sizeInput');
 
                 const applySize = (val) => {
-                    const clamped = Math.min(30, Math.max(2, parseInt(val) || 2));
+                    const clamped = Math.min(30, Math.max(2, parseInt(val, 10) || 2));
                     this.currentSize = clamped;
                     sizeSlider.value = clamped;
                     sizeInput.value = clamped;
@@ -415,8 +415,8 @@
                 sizeInput.addEventListener('input', (e) => applySize(e.target.value));
                 sizeInput.addEventListener('change', (e) => applySize(e.target.value));
 
-                document.getElementById('sizeUpBtn').addEventListener('click', () => applySize(this.currentSize + 1));
-                document.getElementById('sizeDownBtn').addEventListener('click', () => applySize(this.currentSize - 1));
+                document.getElementById('sizeUpBtn').addEventListener('click', () => applySize(Number(this.currentSize) + 1));
+                document.getElementById('sizeDownBtn').addEventListener('click', () => applySize(Number(this.currentSize) - 1));
 
                 // 文字工具設定
                 const fontSizeSlider = document.getElementById('fontSizeSlider');
