@@ -126,6 +126,44 @@
             text-align: center;
             font-size: 14px;
         }
+        .size-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+        .size-step-btn {
+            width: 30px;
+            height: 30px;
+            background: #555;
+            color: #fff;
+            border: 1px solid #777;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .size-step-btn:hover {
+            background: #777;
+        }
+        .size-input {
+            width: 56px;
+            padding: 4px 6px;
+            background: #555;
+            color: #fff;
+            border: 1px solid #777;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+        .size-input::-webkit-inner-spin-button,
+        .size-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .action-buttons {
             display: flex;
             flex-direction: column;
@@ -274,6 +312,11 @@
                 <h3>粉筆粗細</h3>
                 <div class="size-control">
                     <input type="range" class="size-slider" id="sizeSlider" min="2" max="30" value="5">
+                    <div class="size-input-group">
+                        <button class="size-step-btn" id="sizeDownBtn">▼</button>
+                        <input type="number" class="size-input" id="sizeInput" min="2" max="30" value="5">
+                        <button class="size-step-btn" id="sizeUpBtn">▲</button>
+                    </div>
                     <div class="size-display">粗細: <span id="sizeValue">5</span>px</div>
                     <div class="size-preview">
                         <div class="preview-dot" id="previewDot"></div>
@@ -356,11 +399,24 @@
                 // 粗細調整
                 const sizeSlider = document.getElementById('sizeSlider');
                 const sizeValue = document.getElementById('sizeValue');
-                sizeSlider.addEventListener('input', (e) => {
-                    this.currentSize = e.target.value;
-                    sizeValue.textContent = this.currentSize;
+                const sizeInput = document.getElementById('sizeInput');
+
+                const applySize = (val) => {
+                    const clamped = Math.min(30, Math.max(2, parseInt(val, 10) || 2));
+                    this.currentSize = clamped;
+                    sizeSlider.value = clamped;
+                    sizeInput.value = clamped;
+                    sizeValue.textContent = clamped;
                     this.updatePreviewDot();
-                });
+                };
+
+                sizeSlider.addEventListener('input', (e) => applySize(e.target.value));
+
+                sizeInput.addEventListener('input', (e) => applySize(e.target.value));
+                sizeInput.addEventListener('change', (e) => applySize(e.target.value));
+
+                document.getElementById('sizeUpBtn').addEventListener('click', () => applySize(Number(this.currentSize) + 1));
+                document.getElementById('sizeDownBtn').addEventListener('click', () => applySize(Number(this.currentSize) - 1));
 
                 // 文字工具設定
                 const fontSizeSlider = document.getElementById('fontSizeSlider');
