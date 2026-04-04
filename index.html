@@ -640,12 +640,13 @@
                 
                 if (this.isErasing) {
                     this.ctx.globalCompositeOperation = 'destination-out';
+                    // Eraser uses 3x chalk size to improve erasing efficiency
+                    this.ctx.lineWidth = this.currentSize * 3;
                 } else {
                     this.ctx.globalCompositeOperation = 'source-over';
                     this.ctx.strokeStyle = this.currentColor;
+                    this.ctx.lineWidth = this.currentSize;
                 }
-                
-                this.ctx.lineWidth = this.currentSize;
             }
     
             draw(e) {
